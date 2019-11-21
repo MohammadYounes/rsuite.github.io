@@ -1,5 +1,6 @@
 import React from 'react';
 
-export const DirectionContext = React.createContext({
-  direction: localStorage.getItem('direction') || 'ltr'
+export const ThemeContext = React.createContext({
+  direction: localStorage.getItem('direction') || 'ltr',
+  theme: localStorage.getItem('theme') || 'default'
 });

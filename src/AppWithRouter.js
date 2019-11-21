@@ -21,8 +21,8 @@ import { createRouters } from './pages/routers';
 import { getDict } from './locales';
 import zhCN from 'rsuite/lib/IntlProvider/locales/zh_CN';
 import enUS from 'rsuite/lib/IntlProvider/locales/en_US';
-
-import { DirectionContext } from '@/components/Context';
+import loadCssFile from '@/utils/loadCssFile';
+import { ThemeContext } from '@/components/Context';
 
 const html = document.querySelector('html');
 
@@ -31,27 +31,62 @@ export default locale => {
     constructor(props) {
       super(props);
       const direction = localStorage.getItem('direction') || 'ltr';
+      const theme = localStorage.getItem('theme') || 'defualt';
       this.state = {
-        direction
+        direction,
+        theme
       };
-      html.dir = direction;
+      //skip loading default ltr theme
+      if (theme != 'default' || direction != 'ltr')
+        this.loadTheme(theme, direction);
     }
+
+    loadTheme = (themeName, direction) => {
+      localStorage.setItem('direction', direction);
+      localStorage.setItem('theme', themeName);
+      const { globalVars = {} } = window.less || {};
+      window.less &&
+        window.less.modifyVars({
+          ...globalVars,
+          '@theme-is-default': themeName === 'default'
+        });
+      html.dir = direction;
+      const themeId = `theme-${themeName}-${direction}`;
+      loadCssFile(
+        `/resources/css/theme-${themeName}${
+          direction === 'rtl' ? '.rtl' : ''
+        }.css`,
+        themeId
+      ).then(() => {
+        Array.from(document.querySelectorAll('[id^=theme]')).forEach(css => {
+          if (css.id !== themeId) {
+            css.remove();
+          }
+        });
+      });
+    };
+
+    handleToggleTheme = () => {
+      const theme = this.state.theme === 'default' ? 'dark' : 'default';
+      this.setState({ theme });
+      this.loadTheme(theme, this.state.direction);
+    };
 
     handleToggleDirection = () => {
       const direction = this.state.direction === 'ltr' ? 'rtl' : 'ltr';
       this.setState({ direction });
-      html.dir = direction;
-      localStorage.setItem('direction', direction);
+      this.loadTheme(this.state.theme, direction);
     };
 
     render() {
       const { onEnter, onEntered, onRemoveLoading } = this.props;
       const { direction } = this.state;
       return (
-        <DirectionContext.Provider
+        <ThemeContext.Provider
           value={{
             direction,
-            handleToggleDirection: this.handleToggleDirection
+            handleToggleDirection: this.handleToggleDirection,
+            handleToggleTheme: this.handleToggleTheme
           }}
         >
           <IntlProvider locale={getDict(locale)}>
@@ -74,7 +109,7 @@ export default locale => {
               </Router>
             </RSIntlProvider>
           </IntlProvider>
-        </DirectionContext.Provider>
+        </ThemeContext.Provider>
       );
     }
   }
